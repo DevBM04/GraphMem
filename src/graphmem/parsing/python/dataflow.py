@@ -18,8 +18,7 @@ class DataFlowMixin:
                 )
                 analyzer.run()
                 for relation in analyzer.relations:
-                    if not self._has_relation(parsed, relation):
-                        parsed.add_relation(relation)
+                    parsed.add_relation(relation)
 
 class _TreeSitterDataFlowAnalyzer:
     """Conservative intra-procedural DEF/USE analysis.

@@ -81,3 +81,27 @@ class NetworkXGraphStore(GraphStore):
 
     def relation_count(self) -> int:
         return self.graph.number_of_edges()
+
+    def out_edges(self, entity_id: str):
+        if not self.graph.has_node(entity_id):
+            return []
+        return [
+            (
+                self.graph.nodes[target]["entity"],
+                data["relation_type"],
+                data.get("metadata", {}),
+            )
+            for _, target, data in self.graph.out_edges(entity_id, data=True)
+        ]
+
+    def in_edges(self, entity_id: str):
+        if not self.graph.has_node(entity_id):
+            return []
+        return [
+            (
+                self.graph.nodes[source]["entity"],
+                data["relation_type"],
+                data.get("metadata", {}),
+            )
+            for source, _, data in self.graph.in_edges(entity_id, data=True)
+        ]

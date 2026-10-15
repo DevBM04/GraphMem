@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 from graphmem.models.entities import CodeEntity
-from graphmem.models.relations import Relation
+from graphmem.models.relations import Relation, RelationType
 from graphmem.models.entities import CodeEntity, EntityType
 
 class GraphStore(ABC):
@@ -50,4 +50,18 @@ class GraphStore(ABC):
     @abstractmethod
     def relation_count(self) -> int:
         """Return the number of relationships in the graph."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def out_edges(
+        self, entity_id: str
+    ) -> list[tuple[CodeEntity, RelationType, dict]]:
+        """Outgoing edges as (target entity, relation type, metadata)."""
+        raise NotImplementedError
+
+    @abstractmethod
+    def in_edges(
+        self, entity_id: str
+    ) -> list[tuple[CodeEntity, RelationType, dict]]:
+        """Incoming edges as (source entity, relation type, metadata)."""
         raise NotImplementedError
