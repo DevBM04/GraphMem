@@ -52,7 +52,8 @@ class PythonParser(
         self._entities_by_qualified_name: dict[str, CodeEntity] = {}
         self._entities_by_file_and_name: dict[tuple[str, str], CodeEntity] = {}
         self._entities_by_module_and_name: dict[tuple[str, str], CodeEntity] = {}
-
+        self._entities_by_symbol_name: dict[str, list[CodeEntity]] = {}
+        
         # Import aliases per file, e.g.:
         #   from pkg.foo import bar as baz  -> baz: pkg.foo.bar
         self._imports_by_file: dict[str, dict[str, str]] = {}

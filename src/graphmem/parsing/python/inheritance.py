@@ -63,10 +63,14 @@ class InheritanceMixin:
         if not expression:
             return None
 
-        # A base can be written as `module.Base`; use the final attribute as a
-        # candidate only after trying the full qualified expression.
+        # Qualified names are module-relative, so a bare name can collide
+        # across files. Only trust this shortcut when the name is unique.
         qualified = self._entities_by_qualified_name.get(expression)
-        if qualified and qualified.type == EntityType.CLASS:
+        if (
+            qualified
+            and qualified.type == EntityType.CLASS
+            and len(classes_by_name.get(expression, [])) <= 1
+        ):
             return qualified
 
         file_path = child.path or ""

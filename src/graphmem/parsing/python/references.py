@@ -23,6 +23,12 @@ class ReferenceMixin:
             self._entities_by_module_and_name,
         ) = build_symbol_indexes(parsed)
 
+        # symbol name -> all entities with that name (replaces O(n) scans)
+        by_symbol: dict[str, list] = {}
+        for (_, symbol), entity in self._entities_by_module_and_name.items():
+            by_symbol.setdefault(symbol, []).append(entity)
+        self._entities_by_symbol_name = by_symbol
+
     def _has_relation(self, parsed, relation: Relation) -> bool:
         return has_relation(parsed, relation)
 
@@ -34,9 +40,9 @@ class ReferenceMixin:
             source = parsed_file.source
             root = parsed_file.tree.root_node
             statement_entities = {
-                (entity.start_line, entity.end_line): entity
-                for entity in parsed.entities
-                if entity.type == EntityType.STATEMENT and entity.path == record.relative_path
+                (e.start_line, e.end_line): e
+                for e in parsed.entities_in_file(record.relative_path)
+                if e.type == EntityType.STATEMENT
             }
 
             for node in self._walk_named(root):
@@ -107,10 +113,7 @@ class ReferenceMixin:
             if target is not None:
                 return target
 
-        matches = [
-            entity for (_, symbol), entity in self._entities_by_module_and_name.items()
-            if symbol == name
-        ]
+        matches = self._entities_by_symbol_name.get(name, [])
         return matches[0] if len(matches) == 1 else None
 
     def _resolve_imported_symbol(self, imported: str):

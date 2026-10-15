@@ -38,9 +38,8 @@ class _TreeSitterDataFlowAnalyzer:
         self.relations: list[Relation] = []
         self.statement_by_span = {
             (e.start_line, e.end_line): e
-            for e in parsed.entities
+            for e in parsed.entities_in_file(self.record.relative_path)
             if e.type == EntityType.STATEMENT
-            and e.path == self.record.relative_path
         }
 
     def run(self) -> None:

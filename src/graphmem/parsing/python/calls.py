@@ -32,12 +32,22 @@ class _TreeSitterCallResolver:
         self.current_callable: Optional[CodeEntity] = None
         self.current_class: Optional[CodeEntity] = None
         self.current_statement: Optional[CodeEntity] = None
+        file_entities = parsed.entities_in_file(self.record.relative_path)
+
+        self.file_statements = sorted(
+            (e for e in file_entities if e.type == EntityType.STATEMENT),
+            key=lambda e: e.end_line or 0,
+            reverse=True,
+        )
         self.statement_by_span = {
-            (e.start_line, e.end_line): e
-            for e in parsed.entities
-            if e.type == EntityType.STATEMENT
-            and e.path == self.record.relative_path
+            (e.start_line, e.end_line): e for e in self.file_statements
         }
+        self.definition_by_key = {
+            (e.name, e.start_line): e
+            for e in file_entities
+            if e.type in {EntityType.CLASS, EntityType.FUNCTION, EntityType.METHOD}
+        }
+        self._assignment_cache: dict[str, list[tuple[str, str]]] = {}
 
     def run(self) -> None:
         self._visit(self.parsed_file.tree.root_node)
@@ -95,16 +105,7 @@ class _TreeSitterCallResolver:
         if name_node is None:
             return None
         name = self.parser._node_text(name_node, self.source)
-
-        # Exact line/name match is robust and avoids ambiguities from overloads.
-        candidates = [
-            e for e in self.parsed.entities
-            if e.path == self.record.relative_path
-            and e.name == name
-            and e.type in {EntityType.CLASS, EntityType.FUNCTION, EntityType.METHOD}
-            and e.start_line == node.start_point[0] + 1
-        ]
-        return candidates[0] if candidates else None
+        return self.definition_by_key.get((name, node.start_point[0] + 1))
 
     def _statement_entity(self, node) -> Optional[CodeEntity]:
         key = (node.start_point[0] + 1, node.end_point[0] + 1)
@@ -186,50 +187,50 @@ class _TreeSitterCallResolver:
             if target:
                 return target
 
-        matches = [
-            entity for (module, symbol), entity
-            in self.parser._entities_by_module_and_name.items()
-            if symbol == name
-        ]
+        matches = self.parser._entities_by_symbol_name.get(name, [])
         return matches[0] if len(matches) == 1 else None
 
-    def _infer_variable_class(self, variable: str) -> Optional[CodeEntity]:
-        # Search assignment statements before this call.
-        call_line = self.current_statement.start_line if self.current_statement else 10**9
-        candidates = [
-            e for e in self.parsed.entities
-            if e.type == EntityType.STATEMENT
-            and e.path == self.record.relative_path
-            and e.end_line is not None
-            and e.end_line <= call_line
-        ]
-        for entity in sorted(candidates, key=lambda e: e.end_line or 0, reverse=True):
-            text = entity.metadata.get("source", "")
-            if not text.startswith(" "):
-                # Keep source handling simple; Tree-sitter parsing below is
-                # sufficient even when the original statement is multiline.
-                pass
-            # Parse only the statement with the same Tree-sitter parser.
-            try:
-                tree = self.parser._parser.parse(text.encode())
-            except Exception:
+    def _assignments_in(self, statement: CodeEntity) -> list[tuple[str, str]]:
+        """(variable, constructor_name) pairs for `x = Name(...)`; parsed once per statement."""
+        cached = self._assignment_cache.get(statement.id)
+        if cached is not None:
+            return cached
+
+        result: list[tuple[str, str]] = []
+        text = statement.metadata.get("source", "").encode()
+        try:
+            tree = self.parser._parser.parse(text)
+        except Exception:
+            self._assignment_cache[statement.id] = result
+            return result
+
+        for node in self.parser._walk_named(tree.root_node):
+            if node.type != "assignment":
                 continue
-            root = tree.root_node
-            for node in self.parser._walk_named(root):
-                if node.type != "assignment":
-                    continue
-                left = node.child_by_field_name("left")
-                right = node.child_by_field_name("right")
-                if left is None or right is None or left.type != "identifier":
-                    continue
-                if self.parser._node_text(left, text.encode()) != variable:
-                    continue
-                if right.type == "call":
-                    fn = right.child_by_field_name("function")
-                    if fn and fn.type == "identifier":
-                        return self._resolve_name(
-                            self.parser._node_text(fn, text.encode())
-                        )
+            left = node.child_by_field_name("left")
+            right = node.child_by_field_name("right")
+            if left is None or right is None or left.type != "identifier":
+                continue
+            if right.type != "call":
+                continue
+            fn = right.child_by_field_name("function")
+            if fn is not None and fn.type == "identifier":
+                result.append((
+                    self.parser._node_text(left, text),
+                    self.parser._node_text(fn, text),
+                ))
+
+        self._assignment_cache[statement.id] = result
+        return result
+
+    def _infer_variable_class(self, variable: str) -> Optional[CodeEntity]:
+        call_line = self.current_statement.start_line if self.current_statement else 10**9
+        for statement in self.file_statements:  # already sorted by end_line desc
+            if statement.end_line is None or statement.end_line > call_line:
+                continue
+            for var, constructor in self._assignments_in(statement):
+                if var == variable:
+                    return self._resolve_name(constructor)
         return None
 
     @staticmethod
