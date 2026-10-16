@@ -1,88 +1,45 @@
-from graphmem.parsing.python_parser import PythonParser
-from graphmem.graph.builder import GraphBuilder
-from graphmem.indexing.search import SearchEngine
-from graphmem.retrieval.candidates import generate_candidates
-from graphmem.ranking.ranker import rank_candidates
+
+from graphmem.ingestion.pipeline import RepositoryIngestor
 
 
 REPOSITORY_PATH = "examples/sample_repo"
 
 ISSUE = """
-Authentication fails when a user tries to log in.
+The normalize function removes leading and trailing whitespace and converts
+text to lowercase, but it does not handle None values. Calling it with None
+raises an exception.
 """
 
-
 def main():
+    print("Parsing repository and building graph...")
 
-    print("Parsing repository...")
+    repository = RepositoryIngestor().ingest(REPOSITORY_PATH)
 
-    parser = PythonParser()
-
-    parsed_repository = parser.parse_repository(
-        REPOSITORY_PATH
-    )
-
+    print(f"Found {len(repository.parsed.entities)} entities")
+    print(f"Found {len(repository.parsed.relations)} relations")
     print(
-        f"Found {len(parsed_repository.entities)} entities"
+        f"Graph built: {repository.graph.entity_count()} nodes, "
+        f"{repository.graph.relation_count()} edges"
     )
 
-    print(
-        f"Found {len(parsed_repository.relations)} relations"
-    )
+    print("\nLocalizing issue...")
 
-    print("\nBuilding graph...")
-
-    graph = GraphBuilder().build(
-        parsed_repository
-    )
-
-    print("Graph built.")
-
-    print("\nSearching repository...")
-
-    search_engine = SearchEngine(
-        parsed_repository.entities
-    )
-
-    results = search_engine.search(
-        ISSUE,
-        top_k=5,
-    )
-
-    for entity in results:
-
-        print(
-            f"{entity.type.value}: "
-            f"{entity.qualified_name or entity.name}"
-        )
-
-    print("\nGenerating candidates...")
-
-    candidates = generate_candidates(
-        issue=ISSUE,
-        entities=parsed_repository.entities,
-        graph=graph,
-    )
-
-    print("\nRanking candidates...")
-
-    ranked = rank_candidates(candidates)
+    result = repository.localizer.localize(ISSUE, top_k=10)
 
     print("\nTop candidates:\n")
 
-    for candidate in ranked[:10]:
+    if not result.scopes:
+        print("No candidates found.")
+        return
 
-        entity = candidate.entity
+    for rank, hit in enumerate(result.scopes, start=1):
+        entity = hit.entity
+        location = f"{entity.path or '<unknown>'}:{entity.start_line or '?'}"
+        name = entity.qualified_name or entity.name
 
         print(
-            f"{candidate.score:.3f} | "
-            f"{entity.type.value} | "
-            f"{entity.qualified_name or entity.name}"
-        )
-
-        print(
-            f"  Evidence: "
-            f"{', '.join(candidate.evidence)}"
+            f"{rank:2}. {hit.score:.4f} | "
+            f"{entity.type.value} | {location} | {name}"
         )
 
 
