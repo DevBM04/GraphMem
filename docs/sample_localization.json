@@ -1,0 +1,220 @@
+{
+  "issue": "normalize strips value wrongly",
+  "config": "full",
+  "files": [
+    {
+      "file": "pkg/sub/helpers.py",
+      "score": 0.6089
+    },
+    {
+      "file": "file.py",
+      "score": 0.4824
+    }
+  ],
+  "scopes": [
+    {
+      "file": "pkg/sub/helpers.py",
+      "scope": "normalize",
+      "type": "function",
+      "start_line": 7,
+      "end_line": 8,
+      "score": 0.6089,
+      "signals": {
+        "lexical": 1.0,
+        "graph": 0.4356,
+        "dataflow": 0.0
+      }
+    },
+    {
+      "file": "pkg/sub/helpers.py",
+      "scope": "Formatter.format",
+      "type": "method",
+      "start_line": 12,
+      "end_line": 13,
+      "score": 0.513,
+      "signals": {
+        "lexical": 0.726,
+        "graph": 0.6,
+        "dataflow": 0.0
+      }
+    },
+    {
+      "file": "file.py",
+      "scope": "ClassA.method1",
+      "type": "method",
+      "start_line": 16,
+      "end_line": 17,
+      "score": 0.4824,
+      "signals": {
+        "lexical": 0.6649,
+        "graph": 0.6,
+        "dataflow": 0.0
+      }
+    },
+    {
+      "file": "file.py",
+      "scope": "function1",
+      "type": "function",
+      "start_line": 23,
+      "end_line": 28,
+      "score": 0.0997,
+      "signals": {
+        "graph": 0.3989,
+        "lexical": 0.0,
+        "dataflow": 0.0
+      }
+    },
+    {
+      "file": "file.py",
+      "scope": "file",
+      "type": "file",
+      "start_line": null,
+      "end_line": null,
+      "score": 0.09,
+      "signals": {
+        "graph": 0.36,
+        "lexical": 0.0,
+        "dataflow": 0.0
+      }
+    }
+  ],
+  "candidates": [
+    {
+      "level": "statement",
+      "file": "pkg/sub/helpers.py",
+      "scope": "Formatter.format",
+      "start_line": 13,
+      "end_line": 13,
+      "score": 0.6719,
+      "evidence": [
+        {
+          "type": "lexical",
+          "source": "statement matches: normalize, value",
+          "weight": 1.0
+        },
+        {
+          "type": "graph",
+          "source": "calls:in from normalize",
+          "weight": 0.6,
+          "detail": {
+            "seed": "repo://sample_repo/pkg/sub/helpers.py::normalize@3ed6adb",
+            "relations": [
+              "calls:in"
+            ],
+            "hops": 1
+          }
+        }
+      ]
+    },
+    {
+      "level": "statement",
+      "file": "file.py",
+      "scope": "ClassA.method1",
+      "start_line": 17,
+      "end_line": 17,
+      "score": 0.6596,
+      "evidence": [
+        {
+          "type": "lexical",
+          "source": "statement matches: normalize, value",
+          "weight": 1.0
+        },
+        {
+          "type": "graph",
+          "source": "calls:in from normalize",
+          "weight": 0.6,
+          "detail": {
+            "seed": "repo://sample_repo/pkg/sub/helpers.py::normalize@3ed6adb",
+            "relations": [
+              "calls:in"
+            ],
+            "hops": 1
+          }
+        }
+      ]
+    },
+    {
+      "level": "statement",
+      "file": "pkg/sub/helpers.py",
+      "scope": "normalize",
+      "start_line": 8,
+      "end_line": 8,
+      "score": 0.4769,
+      "evidence": [
+        {
+          "type": "lexical",
+          "source": "statement matches: value",
+          "weight": 0.5
+        },
+        {
+          "type": "graph",
+          "source": "calls:out from Formatter.format",
+          "weight": 0.4356,
+          "detail": {
+            "seed": "repo://sample_repo/pkg/sub/helpers.py::Formatter.format@3ed6adb",
+            "relations": [
+              "calls:out"
+            ],
+            "hops": 1
+          }
+        }
+      ]
+    },
+    {
+      "level": "statement",
+      "file": "file.py",
+      "scope": "file",
+      "start_line": 11,
+      "end_line": 11,
+      "score": 0.2693,
+      "evidence": [
+        {
+          "type": "lexical",
+          "source": "statement matches: normalize",
+          "weight": 0.5
+        },
+        {
+          "type": "graph",
+          "source": "references:in from normalize",
+          "weight": 0.36,
+          "detail": {
+            "seed": "repo://sample_repo/pkg/sub/helpers.py::normalize@3ed6adb",
+            "relations": [
+              "references:in"
+            ],
+            "hops": 1
+          }
+        }
+      ]
+    },
+    {
+      "level": "scope",
+      "file": "file.py",
+      "scope": "function1",
+      "start_line": 23,
+      "end_line": 28,
+      "score": 0.0997,
+      "evidence": [
+        {
+          "type": "graph",
+          "source": "calls:in from ClassA.method1",
+          "weight": 0.3989,
+          "detail": {
+            "seed": "repo://sample_repo/file.py::ClassA.method1@3ed6adb",
+            "relations": [
+              "calls:in"
+            ],
+            "hops": 1
+          }
+        }
+      ]
+    }
+  ],
+  "timings_ms": {
+    "lexical": 0.02,
+    "graph": 0.07,
+    "providers": 0.0,
+    "statements": 0.2,
+    "total": 0.33
+  }
+}
