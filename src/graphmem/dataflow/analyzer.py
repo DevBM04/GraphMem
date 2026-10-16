@@ -14,6 +14,7 @@ Limitations (by design, MVP):
 """
 from __future__ import annotations
 
+from bisect import bisect_right
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
 from enum import Enum
@@ -46,6 +47,7 @@ class DataFlowSlicer:
     def __init__(self, graph: GraphStore) -> None:
         self.graph = graph
         self._by_file: dict[str, list[CodeEntity]] = defaultdict(list)
+        self._by_file_starts: dict[str, list[int]] = {}
         self._by_scope: dict[str, list[CodeEntity]] = defaultdict(list)
         self._build_index()
 
@@ -59,22 +61,45 @@ class DataFlowSlicer:
                 self._by_file[stmt.path].append(stmt)
             if stmt.parent_id:
                 self._by_scope[stmt.parent_id].append(stmt)
-        for statements in self._by_file.values():
+        for path, statements in self._by_file.items():
             statements.sort(key=lambda s: (s.start_line or 0, s.end_line or 0))
+            # Keep this parallel to _by_file[path] for bisect-based lookup.
+            self._by_file_starts[path] = [s.start_line or 0 for s in statements]
         for statements in self._by_scope.values():
             statements.sort(key=lambda s: (s.start_line or 0, s.end_line or 0))
 
     def statement_at(self, path: str, line: int) -> CodeEntity | None:
         """Innermost statement covering `line` (smallest span wins)."""
+        statements = self._by_file.get(path, [])
+        starts = self._by_file_starts.get(path, [])
+        # Only statements whose start line is <= the target can contain it.
+        i = bisect_right(starts, line) - 1
         best: CodeEntity | None = None
-        best_span = 0
-        for stmt in self._by_file.get(path, []):
-            if stmt.start_line is None or stmt.end_line is None:
-                continue
-            if stmt.start_line <= line <= stmt.end_line:
-                span = stmt.end_line - stmt.start_line
-                if best is None or span < best_span:
-                    best, best_span = stmt, span
+        best_span: int | None = None
+        best_index = -1
+
+        while i >= 0:
+            stmt = statements[i]
+            start = stmt.start_line
+            end = stmt.end_line
+
+            # Earlier-starting statements cannot beat the current span once
+            # the distance from their start to the target exceeds that span.
+            # Use '>' rather than '>=' to preserve first-in-sort-order
+            # tie-breaking for statements with equal spans.
+            if best_span is not None and start is not None and line - start > best_span:
+                break
+
+            if start is not None and end is not None and start <= line <= end:
+                span = end - start
+                if (
+                    best is None
+                    or span < best_span
+                    or (span == best_span and i < best_index)
+                ):
+                    best, best_span, best_index = stmt, span, i
+            i -= 1
+
         return best
 
     def statements_in_scope(self, scope_id: str) -> list[CodeEntity]:

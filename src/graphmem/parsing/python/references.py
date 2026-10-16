@@ -150,9 +150,18 @@ class ReferenceMixin:
 
     @staticmethod
     def _contains_node(root, needle) -> bool:
-        if root.id == needle.id:
-            return True
-        return any(ReferenceMixin._contains_node(child, needle) for child in root.named_children)
+        """Return whether needle occurs under root without recursive traversal."""
+        stack = [root]
+
+        while stack:
+            current = stack.pop()
+
+            if current.id == needle.id:
+                return True
+
+            stack.extend(reversed(current.named_children))
+
+        return False
 
     def _statement_for_node(self, node, statement_entities):
         current = node

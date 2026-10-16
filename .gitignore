@@ -14,3 +14,6 @@ build/
 
 .idea/
 .vscode/
+
+# GraphMem runtime cache
+.cache/

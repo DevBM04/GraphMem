@@ -4,6 +4,7 @@ DEFAULT_EXCLUDED_DIRS = {
     ".git", "__pycache__", ".venv", "venv", "env", ".tox",
     ".mypy_cache", ".pytest_cache", "build", "dist", "node_modules",
     ".idea", ".vscode",
+    "tests", "docs", "examples", "benchmarks",
 }
 
 STATEMENT_TYPES = {

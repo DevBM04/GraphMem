@@ -114,6 +114,9 @@ class CodeIndex:
         self.children_names: dict[str, list[str]] = defaultdict(list)
         self.by_name: dict[str, list[CodeEntity]] = defaultdict(list)
         self.by_path: dict[str, list[CodeEntity]] = defaultdict(list)
+        # Maps every path suffix (e.g. "pkg/module.py") to scopes in that file.
+        # This preserves suffix matching without scanning every known path.
+        self.by_path_suffix: dict[str, list[CodeEntity]] = defaultdict(list)
         for e in self.scopes:
             if e.parent_id:
                 self.children_names[e.parent_id].append(e.name)
@@ -121,6 +124,11 @@ class CodeIndex:
                 self.by_name[e.name].append(e)
             if e.path:
                 self.by_path[e.path].append(e)
+                normalized_path = e.path.replace("\\", "/").lstrip("./")
+                parts = normalized_path.split("/")
+                for i in range(len(parts)):
+                    suffix = "/".join(parts[i:])
+                    self.by_path_suffix[suffix].append(e)
 
         self._bm25 = BM25([self._doc(e) for e in self.scopes])
         self.idf = self._bm25.idf

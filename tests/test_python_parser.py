@@ -219,3 +219,19 @@ def test_get_entity_lookup(parsed: ParsedRepository):
     file_entity = find_one(parsed, type=EntityType.FILE, path="file.py")
     assert parsed.get_entity(file_entity.id) is file_entity
     assert parsed.get_entity("repo://does-not-exist@working") is None
+
+def test_deeply_nested_compound_statements_parse_without_recursion_error(tmp_path):
+    depth = 150
+    source = "def deeply_nested():\n"
+    source += "".join("    " * (level + 1) + "if True:\n" for level in range(depth))
+    source += "    " * (depth + 1) + "return 1\n"
+
+    (tmp_path / "deep.py").write_text(source, encoding="utf-8")
+    parsed = PythonParser().parse_repository(str(tmp_path))
+
+    function = find_one(
+        parsed,
+        type=EntityType.FUNCTION,
+        qualified_name="deeply_nested",
+    )
+    assert function is not None

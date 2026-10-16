@@ -48,6 +48,7 @@ class _TreeSitterCallResolver:
             if e.type in {EntityType.CLASS, EntityType.FUNCTION, EntityType.METHOD}
         }
         self._assignment_cache: dict[str, list[tuple[str, str]]] = {}
+        self._assignment_index: dict[str, list[tuple[int, str]]] | None = None
 
     def run(self) -> None:
         self._visit(self.parsed_file.tree.root_node)
@@ -223,14 +224,41 @@ class _TreeSitterCallResolver:
         self._assignment_cache[statement.id] = result
         return result
 
-    def _infer_variable_class(self, variable: str) -> Optional[CodeEntity]:
-        call_line = self.current_statement.start_line if self.current_statement else 10**9
-        for statement in self.file_statements:  # already sorted by end_line desc
-            if statement.end_line is None or statement.end_line > call_line:
+    def _build_assignment_index(self) -> None:
+        """Index constructor assignments by variable and statement end line.
+
+        Each statement is parsed at most once by _assignments_in().
+        Entries preserve the old resolver's ordering: latest eligible
+        statement first, and original AST order within a statement.
+        """
+        if self._assignment_index is not None:
+            return
+
+        index: dict[str, list[tuple[int, str]]] = {}
+
+        for statement in self.file_statements:
+            end_line = statement.end_line
+            if end_line is None:
                 continue
-            for var, constructor in self._assignments_in(statement):
-                if var == variable:
-                    return self._resolve_name(constructor)
+
+            for variable, constructor in self._assignments_in(statement):
+                index.setdefault(variable, []).append((end_line, constructor))
+
+        self._assignment_index = index
+
+    def _infer_variable_class(self, variable: str) -> Optional[CodeEntity]:
+        call_line = (
+            self.current_statement.start_line
+            if self.current_statement
+            else 10**9
+        )
+
+        self._build_assignment_index()
+
+        for end_line, constructor in self._assignment_index.get(variable, []):
+            if end_line <= call_line:
+                return self._resolve_name(constructor)
+
         return None
 
     @staticmethod
