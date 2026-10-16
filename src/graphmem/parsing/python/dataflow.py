@@ -144,6 +144,15 @@ class _TreeSitterDataFlowAnalyzer:
         uses: set[str] = set()
         defines: set[str] = set()
 
+        # Compound statements: extract uses only from the header,
+        # not from their bodies. Bodies are processed separately.
+        header_fields = {
+            "if_statement": ("condition",),
+            "while_statement": ("condition",),
+            "match_statement": ("subject",),
+            "try_statement": (),
+        }
+
         if node.type == "expression_statement":
             children = node.named_children
 
@@ -197,16 +206,45 @@ class _TreeSitterDataFlowAnalyzer:
                         defines.add(self.parser._node_text(child, self.source).split(".")[0])
             return uses, defines
 
+        
         if node.type == "with_statement":
             for child in node.named_children:
-                if child.type == "with_clause":
-                    uses.update(self._load_names(child))
-                elif child.type in {"as_pattern", "as_pattern_target"}:
-                    defines.update(self._store_names(child))
+                if child.type != "with_clause":
+                    continue
+
+                for item in child.named_children:
+                    if item.type != "with_item":
+                        continue
+
+                    value = item.child_by_field_name("value")
+                    if value is None:
+                        continue
+
+                    if value.type == "as_pattern":
+                        # The resource expression is the pattern's first field.
+                        resource = value.named_children[0] if value.named_children else None
+                        if resource is not None:
+                            uses.update(self._load_names(resource))
+
+                        # `as handle` introduces a definition.
+                        alias = value.child_by_field_name("alias")
+                        if alias is not None:
+                            defines.update(self._store_names(alias))
+                    else:
+                        # `with open(path):` has no alias.
+                        uses.update(self._load_names(value))
+
             return uses, defines
 
-        # For return/if/while/expression/raise/assert/etc., every identifier
-        # is a use unless it occurs in a store position under an assignment.
+        if node.type in header_fields:
+            for field_name in header_fields[node.type]:
+                header = node.child_by_field_name(field_name)
+                if header is not None:
+                    uses.update(self._load_names(header))
+            return uses, defines
+
+        # For return/expression/raise/assert/etc., every identifier
+        # is a use unless it occurs in a store position.
         uses.update(self._load_names(node))
         return uses, defines
 
