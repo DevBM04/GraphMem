@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graphmem"
+version = "0.1.0"
+description = "Repository-aware graph-based bug localization"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "tree-sitter",
+    "tree-sitter-python",
+    "networkx",
+    "rank-bm25",
+    "pyvis",
+    "fastapi",
+    "uvicorn",
+    "unidiff",
+    "PyGithub",
+    "datasets",
+    "matplotlib",
+    "httpx",
+    "pytest",
+]
+
+[project.scripts]
+graphmem-localize = "graphmem.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"

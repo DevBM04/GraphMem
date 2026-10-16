@@ -4,3 +4,10 @@ rank-bm25
 pyvis
 tree_sitter
 tree_sitter_python
+fastapi
+uvicorn
+unidiff
+PyGithub
+datasets
+matplotlib
+httpx

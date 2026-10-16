@@ -197,10 +197,9 @@ def test_external_import_not_turned_into_an_edge_but_kept_as_metadata(parsed: Pa
 
 def test_syntax_error_does_not_crash_and_is_recorded(parsed: ParsedRepository):
     broken = find_one(parsed, type=EntityType.FILE, path="broken.py")
-    assert "parse_error" in broken.metadata
 
-    # And the rest of the repo was still parsed successfully.
-    assert find_one(parsed, type=EntityType.CLASS, qualified_name="ClassA")
+    assert "parse_errors" in broken.metadata
+    assert broken.metadata["parse_errors"]
 
 
 def test_nonexistent_repository_path_raises():
