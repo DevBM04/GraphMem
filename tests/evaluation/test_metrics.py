@@ -165,3 +165,12 @@ def test_line_hit_only_top_k():
 def test_mean():
     assert mean([1.0, 0.5, 0.0]) == 0.5
     assert mean([]) == 0.0
+
+
+def test_line_hit_with_empty_gold_lines():
+    ranked_spans = [
+        ("flask/app.py", 20, 30),
+    ]
+    gold_lines = {}
+
+    assert line_hit_at_k(ranked_spans, gold_lines, 1) == 0.0
