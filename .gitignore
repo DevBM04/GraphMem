@@ -17,4 +17,6 @@ build/
 
 # GraphMem runtime cache
 .cache/
-/node_modules/
+
+# Generated GitHub artifacts
+data/artifacts/
