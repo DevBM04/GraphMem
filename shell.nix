@@ -11,4 +11,12 @@ pkgs.mkShell {
     pkgs.stdenv.cc.cc
     pkgs.zlib
   ];
+
+  shellHook = ''
+    if [ ! -d venv ]; then
+      python -m venv venv
+    fi
+
+    source venv/bin/activate
+  '';
 }
