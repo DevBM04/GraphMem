@@ -17,3 +17,4 @@ build/
 
 # GraphMem runtime cache
 .cache/
+/node_modules/
