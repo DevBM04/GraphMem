@@ -121,7 +121,6 @@ def fetch_artifacts(owner: str, name: str) -> Path:
                 state="closed",
                 sort="created",
                 direction="desc",
-                per_page=100,
             ),
             github,
         )
@@ -176,8 +175,6 @@ def fetch_artifacts(owner: str, name: str) -> Path:
                 state="closed",
                 sort="created",
                 direction="desc",
-                base=None,
-                per_page=100,
             ),
             github,
         )
